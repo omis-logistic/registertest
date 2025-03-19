@@ -105,16 +105,16 @@
     </div>
 
     <script>
-        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyjYws1JTLglX_pb3xMuGnHDY2bGZ1lFyb-v9VmCMaFkkapw5391PdsH05UvwUh7xLw/exec';
+        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxBe2t6dE9z1XCoDJOujNVDIDpKWnFsi1TToNhRU9VdUKJE_tmAl1PHJQmxEqSq6U9_/exec';
 
-        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const message = document.getElementById('message');
-            message.textContent = '';
+document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = document.getElementById('message');
+    message.textContent = '';
+    
+    if (!validateForm()) return;
 
-            if (!validateForm()) return;
-
-            try {
+    try {
                 const formData = {
                     phone: document.getElementById('phone').value,
                     password: document.getElementById('password').value,
@@ -129,27 +129,36 @@
                 };
 
                 const response = await fetch(PROXY_URL, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(formData),
-                    redirect: 'follow'
-                });
-
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert(`Registration Successful!\nUser ID: ${result.userId}`);
-                    window.location.reload();
-                } else {
-                    message.textContent = result.message || 'Registration failed. Please try again.';
-                }
-            } catch (error) {
-                console.error('Full error:', error);
-                message.textContent = `Server Error: ${error.message}`;
-            }
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData),
+            redirect: 'manual' // Add this line
         });
+
+        // Handle redirect manually
+        const redirectURL = response.headers.get('Location');
+        if (redirectURL) {
+            const secondResponse = await fetch(redirectURL);
+            const result = await secondResponse.json();
+            handleResult(result);
+        } else {
+            const result = await response.json();
+            handleResult(result);
+        }
+    } catch (error) {
+        console.error('Full error:', error);
+        message.textContent = `Server Error: ${error.message}`;
+    }
+});
+
+function handleResult(result) {
+    if (result.success) {
+        alert(`Registration Successful!\nUser ID: ${result.userId}`);
+        window.location.reload();
+    } else {
+        document.getElementById('message').textContent = result.message || 'Registration failed';
+    }
+}
 
         function validateForm() {
             // Password match
