@@ -105,16 +105,14 @@
     </div>
 
     <script>
-        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxBe2t6dE9z1XCoDJOujNVDIDpKWnFsi1TToNhRU9VdUKJE_tmAl1PHJQmxEqSq6U9_/exec';
+        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxoAsOpvM3bNb1TXvQM6mND2aagDFetxN2KsqzSk2kORFHnl3pbzflFkzHbkKhqJMLf/exec';
 
-document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const message = document.getElementById('message');
-    message.textContent = '';
-    
-    if (!validateForm()) return;
+        async function handleSubmit(e) {
+            e.preventDefault();
+            const message = document.getElementById('message');
+            message.textContent = '';
 
-    try {
+            try {
                 const formData = {
                     phone: document.getElementById('phone').value,
                     password: document.getElementById('password').value,
@@ -129,27 +127,23 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
                 };
 
                 const response = await fetch(PROXY_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(formData),
-            redirect: 'manual' // Add this line
-        });
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData),
+                    redirect: 'manual'
+                });
 
-        // Handle redirect manually
-        const redirectURL = response.headers.get('Location');
-        if (redirectURL) {
-            const secondResponse = await fetch(redirectURL);
-            const result = await secondResponse.json();
-            handleResult(result);
-        } else {
-            const result = await response.json();
-            handleResult(result);
+                // Handle Google's 302 redirect
+                const finalResponse = response.headers.get('Location') ? 
+                    await fetch(response.headers.get('Location')) :
+                    response;
+
+                const result = await finalResponse.json();
+                handleResult(result);
+            } catch (error) {
+                message.textContent = `Server Error: ${error.message}`;
+            }
         }
-    } catch (error) {
-        console.error('Full error:', error);
-        message.textContent = `Server Error: ${error.message}`;
-    }
-});
 
 function handleResult(result) {
     if (result.success) {
