@@ -105,7 +105,7 @@
     </div>
 
     <script>
-        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzFtRlP4nYxG2NkhXS0cqVz--X3I2bgltROpazN-sb3B1cotRYsmf8cGi30OlUrRNVl/exec';
+        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwdeSt09HxjYok9qZ_Rj1c68w5kfh-ZVO1IoflTvOI5aF_djCxKq_k21Vf0kLMuYCKT/exec';
 
         async function handleSubmit(e) {
     e.preventDefault();
@@ -139,33 +139,27 @@
         });
 
         // Handle non-OK responses from proxy
-        if (!response.ok) {
-            throw new Error(`Proxy Error: ${response.status} ${response.statusText}`);
+        if (response.status < 200 || response.status >= 400) {
+            throw new Error(`Proxy Error: ${response.status}`);
         }
 
         // Handle Google's 302 redirect
-        let finalResponse;
+        let finalResponse = response;
         if (response.headers.get('Location')) {
             finalResponse = await fetch(response.headers.get('Location'));
-            // Check main backend response
+            
+            // Check if backend response is valid
             if (!finalResponse.ok) {
-                throw new Error(`Backend Error: ${finalResponse.status} ${finalResponse.statusText}`);
+                const errorText = await finalResponse.text();
+                throw new Error(`Backend Error: ${errorText}`);
             }
-        } else {
-            finalResponse = response;
         }
 
-        // Parse JSON response
-        let result;
-        try {
-            result = await finalResponse.json();
-        } catch (parseError) {
-            throw new Error('Invalid server response format');
-        }
-
-        // Handle final result
+        const result = await finalResponse.json();
+        
         if (result.success) {
             alert(`Registration Successful!\nUser ID: ${result.userId}`);
+            // Only reset form on success
             document.getElementById('registrationForm').reset();
         } else {
             throw new Error(result.message || 'Registration failed');
