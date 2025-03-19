@@ -105,45 +105,79 @@
     </div>
 
     <script>
-        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxoAsOpvM3bNb1TXvQM6mND2aagDFetxN2KsqzSk2kORFHnl3pbzflFkzHbkKhqJMLf/exec';
+        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzFtRlP4nYxG2NkhXS0cqVz--X3I2bgltROpazN-sb3B1cotRYsmf8cGi30OlUrRNVl/exec';
 
         async function handleSubmit(e) {
-            e.preventDefault();
-            const message = document.getElementById('message');
-            message.textContent = '';
+    e.preventDefault();
+    const message = document.getElementById('message');
+    message.textContent = '';
 
-            try {
-                const formData = {
-                    phone: document.getElementById('phone').value,
-                    password: document.getElementById('password').value,
-                    email: document.getElementById('email').value,
-                    fullName: document.getElementById('fullName').value,
-                    address: document.getElementById('address').value,
-                    postcode: document.getElementById('postcode').value,
-                    frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-                    backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-                    frontICType: document.getElementById('frontIC').files[0].type,
-                    backICType: document.getElementById('backIC').files[0].type
-                };
+    try {
+        // Validate form before submission
+        if (!validateForm()) return;
 
-                const response = await fetch(PROXY_URL, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(formData),
-                    redirect: 'manual'
-                });
+        // Prepare form data
+        const formData = {
+            phone: document.getElementById('phone').value,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value,
+            fullName: document.getElementById('fullName').value,
+            address: document.getElementById('address').value,
+            postcode: document.getElementById('postcode').value,
+            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+            frontICType: document.getElementById('frontIC').files[0].type,
+            backICType: document.getElementById('backIC').files[0].type
+        };
 
-                // Handle Google's 302 redirect
-                const finalResponse = response.headers.get('Location') ? 
-                    await fetch(response.headers.get('Location')) :
-                    response;
+        // First fetch call to proxy
+        const response = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData),
+            redirect: 'manual'
+        });
 
-                const result = await finalResponse.json();
-                handleResult(result);
-            } catch (error) {
-                message.textContent = `Server Error: ${error.message}`;
-            }
+        // Handle non-OK responses from proxy
+        if (!response.ok) {
+            throw new Error(`Proxy Error: ${response.status} ${response.statusText}`);
         }
+
+        // Handle Google's 302 redirect
+        let finalResponse;
+        if (response.headers.get('Location')) {
+            finalResponse = await fetch(response.headers.get('Location'));
+            // Check main backend response
+            if (!finalResponse.ok) {
+                throw new Error(`Backend Error: ${finalResponse.status} ${finalResponse.statusText}`);
+            }
+        } else {
+            finalResponse = response;
+        }
+
+        // Parse JSON response
+        let result;
+        try {
+            result = await finalResponse.json();
+        } catch (parseError) {
+            throw new Error('Invalid server response format');
+        }
+
+        // Handle final result
+        if (result.success) {
+            alert(`Registration Successful!\nUser ID: ${result.userId}`);
+            document.getElementById('registrationForm').reset();
+        } else {
+            throw new Error(result.message || 'Registration failed');
+        }
+
+    } catch (error) {
+        console.error('Full error:', error);
+        message.textContent = error.message;
+        // Prevent form reset on error
+        return false;
+    }
+}
 
 function handleResult(result) {
     if (result.success) {
