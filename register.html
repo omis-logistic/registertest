@@ -105,135 +105,157 @@
     </div>
 
     <script>
-        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwdeSt09HxjYok9qZ_Rj1c68w5kfh-ZVO1IoflTvOI5aF_djCxKq_k21Vf0kLMuYCKT/exec';
+    const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwdeSt09HxjYok9qZ_Rj1c68w5kfh-ZVO1IoflTvOI5aF_djCxKq_k21Vf0kLMuYCKT/exec';
 
-        async function handleSubmit(e) {
-    e.preventDefault();
-    const message = document.getElementById('message');
-    message.textContent = '';
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const message = document.getElementById('message');
+        message.textContent = '';
 
-    try {
-        // Validate form before submission
-        if (!validateForm()) return;
+        try {
+            // Validate form inputs
+            if (!validateForm()) return;
 
-        // Prepare form data
-        const formData = {
-            phone: document.getElementById('phone').value,
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
-            fullName: document.getElementById('fullName').value,
-            address: document.getElementById('address').value,
-            postcode: document.getElementById('postcode').value,
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
-        };
+            // Prepare form data with files
+            const formData = {
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value,
+                fullName: document.getElementById('fullName').value,
+                address: document.getElementById('address').value,
+                postcode: document.getElementById('postcode').value,
+                frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+                backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+                frontICType: document.getElementById('frontIC').files[0].type,
+                backICType: document.getElementById('backIC').files[0].type
+            };
 
-        // First fetch call to proxy
-        const response = await fetch(PROXY_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(formData),
-            redirect: 'manual'
-        });
+            // Step 1: Initial request to proxy
+            const proxyResponse = await fetch(PROXY_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(formData),
+                redirect: 'manual'
+            });
 
-        // Handle non-OK responses from proxy
-        if (response.status < 200 || response.status >= 400) {
-            throw new Error(`Proxy Error: ${response.status}`);
-        }
+            // Step 2: Handle different response scenarios
+            if (proxyResponse.status === 0 || proxyResponse.status === 302) {
+                // Handle CORS redirect
+                const backendUrl = proxyResponse.headers.get('Location');
+                
+                if (!backendUrl) {
+                    throw new Error('Missing redirect location');
+                }
 
-        // Handle Google's 302 redirect
-        let finalResponse = response;
-        if (response.headers.get('Location')) {
-            finalResponse = await fetch(response.headers.get('Location'));
-            
-            // Check if backend response is valid
-            if (!finalResponse.ok) {
-                const errorText = await finalResponse.text();
-                throw new Error(`Backend Error: ${errorText}`);
+                // Step 3: Follow redirect to actual backend
+                const backendResponse = await fetch(backendUrl, {
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+                // Step 4: Process backend response
+                if (!backendResponse.ok) {
+                    const error = await backendResponse.text();
+                    throw new Error(`Backend error: ${error}`);
+                }
+
+                const result = await backendResponse.json();
+                
+                if (result.success) {
+                    alert(`Registration Successful!\nUser ID: ${result.userId}`);
+                    document.getElementById('registrationForm').reset();
+                } else {
+                    throw new Error(result.message || 'Registration failed');
+                }
+            } 
+            else if (proxyResponse.ok) {
+                // Handle direct success response
+                const result = await proxyResponse.json();
+                if (result.success) {
+                    alert(`Success! User ID: ${result.userId}`);
+                    document.getElementById('registrationForm').reset();
+                } else {
+                    throw new Error(result.message);
+                }
             }
-        }
+            else {
+                // Handle proxy errors
+                const error = await proxyResponse.text();
+                throw new Error(`Proxy error: ${error}`);
+            }
 
-        const result = await finalResponse.json();
-        
+        } catch (error) {
+            console.error('Submission Error:', error);
+            message.textContent = error.message;
+            // Prevent form reset on error
+            return false;
+        }
+    }
+
+    // Existing helper functions below
+    function handleResult(result) {
         if (result.success) {
             alert(`Registration Successful!\nUser ID: ${result.userId}`);
-            // Only reset form on success
-            document.getElementById('registrationForm').reset();
+            window.location.reload();
         } else {
-            throw new Error(result.message || 'Registration failed');
+            document.getElementById('message').textContent = result.message || 'Registration failed';
         }
-
-    } catch (error) {
-        console.error('Full error:', error);
-        message.textContent = error.message;
-        // Prevent form reset on error
-        return false;
     }
-}
 
-function handleResult(result) {
-    if (result.success) {
-        alert(`Registration Successful!\nUser ID: ${result.userId}`);
-        window.location.reload();
-    } else {
-        document.getElementById('message').textContent = result.message || 'Registration failed';
+    function validateForm() {
+        // Password validation
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        if (password.value !== confirmPassword.value) {
+            showError('Passwords do not match');
+            return false;
+        }
+
+        // Email validation
+        const email = document.getElementById('email');
+        const confirmEmail = document.getElementById('confirmEmail');
+        if (email.value !== confirmEmail.value) {
+            showError('Emails do not match');
+            return false;
+        }
+
+        // File validation
+        const frontIC = document.getElementById('frontIC').files[0];
+        const backIC = document.getElementById('backIC').files[0];
+        
+        if (!frontIC || !backIC) {
+            showError('Both IC documents are required');
+            return false;
+        }
+
+        // File type validation
+        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
+            showError('Only JPG, PNG, or PDF files allowed');
+            return false;
+        }
+
+        return true;
     }
-}
 
-        function validateForm() {
-            // Password match
-            const password = document.getElementById('password');
-            const confirmPassword = document.getElementById('confirmPassword');
-            if (password.value !== confirmPassword.value) {
-                showError('Passwords do not match');
-                return false;
-            }
+    function showError(text) {
+        document.getElementById('message').textContent = `Error: ${text}`;
+    }
 
-            // Email match
-            const email = document.getElementById('email');
-            const confirmEmail = document.getElementById('confirmEmail');
-            if (email.value !== confirmEmail.value) {
-                showError('Emails do not match');
-                return false;
-            }
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (reader.readyState === FileReader.DONE) {
+                    resolve(reader.result.split(',')[1]);
+                }
+            };
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
 
-            // File validation
-            const frontIC = document.getElementById('frontIC').files[0];
-            const backIC = document.getElementById('backIC').files[0];
-            
-            if (!frontIC || !backIC) {
-                showError('Both IC documents are required');
-                return false;
-            }
-
-            // File type check
-            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-                showError('Only JPG, PNG, or PDF files allowed');
-                return false;
-            }
-
-            return true;
-        }
-
-        function showError(text) {
-            document.getElementById('message').textContent = `Error: ${text}`;
-        }
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    if (reader.readyState === FileReader.DONE) {
-                        resolve(reader.result.split(',')[1]);
-                    }
-                };
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
-        }
+    // Attach event listener
+    document.getElementById('registrationForm').addEventListener('submit', handleSubmit);
     </script>
 </body>
 </html>
