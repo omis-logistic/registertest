@@ -105,16 +105,15 @@
     </div>
 
     <script>
-    const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwdeSt09HxjYok9qZ_Rj1c68w5kfh-ZVO1IoflTvOI5aF_djCxKq_k21Vf0kLMuYCKT/exec';
+    const PROXY_URL = 'https://script.google.com/macros/s/AKfycby7jdqpNWJe02VFLucXTMfkXVP3O61wza3x63NDKQ_tVQlYb_bgf3ORjmvCDtXU1XxD/exec';
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const message = document.getElementById('message');
-        message.textContent = '';
+async function handleSubmit(e) {
+    e.preventDefault();
+    const message = document.getElementById('message');
+    message.textContent = '';
 
-        try {
-            // Validate form inputs
-            if (!validateForm()) return;
+    try {
+        if (!validateForm()) return;
 
             // Prepare form data with files
             const formData = {
@@ -131,65 +130,33 @@
             };
 
             // Step 1: Initial request to proxy
-            const proxyResponse = await fetch(PROXY_URL, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(formData),
-                redirect: 'manual'
-            });
+        const response = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData),
+            credentials: 'omit'
+        });
 
-            // Step 2: Handle different response scenarios
-            if (proxyResponse.status === 0 || proxyResponse.status === 302) {
-                // Handle CORS redirect
-                const backendUrl = proxyResponse.headers.get('Location');
-                
-                if (!backendUrl) {
-                    throw new Error('Missing redirect location');
-                }
-
-                // Step 3: Follow redirect to actual backend
-                const backendResponse = await fetch(backendUrl, {
-                    headers: {'Content-Type': 'application/json'}
-                });
-
-                // Step 4: Process backend response
-                if (!backendResponse.ok) {
-                    const error = await backendResponse.text();
-                    throw new Error(`Backend error: ${error}`);
-                }
-
-                const result = await backendResponse.json();
-                
-                if (result.success) {
-                    alert(`Registration Successful!\nUser ID: ${result.userId}`);
-                    document.getElementById('registrationForm').reset();
-                } else {
-                    throw new Error(result.message || 'Registration failed');
-                }
-            } 
-            else if (proxyResponse.ok) {
-                // Handle direct success response
-                const result = await proxyResponse.json();
-                if (result.success) {
-                    alert(`Success! User ID: ${result.userId}`);
-                    document.getElementById('registrationForm').reset();
-                } else {
-                    throw new Error(result.message);
-                }
-            }
-            else {
-                // Handle proxy errors
-                const error = await proxyResponse.text();
-                throw new Error(`Proxy error: ${error}`);
-            }
-
-        } catch (error) {
-            console.error('Submission Error:', error);
-            message.textContent = error.message;
-            // Prevent form reset on error
-            return false;
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message);
         }
+
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`Success! User ID: ${result.userId}`);
+            document.getElementById('registrationForm').reset();
+        } else {
+            throw new Error(result.message);
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+        message.textContent = error.message;
+        return false;
     }
+}
 
     // Existing helper functions below
     function handleResult(result) {
