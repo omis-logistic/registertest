@@ -47,7 +47,7 @@
     <div class="container">
         <h2>New Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbwhdZC_UQx7YKRYiqdACc6nrF9Yh-n_EqykajgrzMplx_wkwKwPKrRSh6n8nIcEKvwo4Q/exec" 
+              action="https://script.google.com/macros/s/AKfycbzTLgTyhJD4464sDJPIgy-kp4x3uoywob1f_GhFnSfh-LRNnCUgLDkcEOqLckQZchSxAw/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             <div class="form-group">
@@ -117,14 +117,14 @@
         message.textContent = '';
 
         try {
-            // Validate form inputs first
+            // 1. Validate form inputs
             if (!validateForm()) return;
 
-            // Get file inputs
+            // 2. Get file inputs
             const frontICFile = document.getElementById('frontIC').files[0];
             const backICFile = document.getElementById('backIC').files[0];
 
-            // Prepare form data
+            // 3. Prepare form data
             const formData = {
                 phone: document.getElementById('phone').value,
                 password: document.getElementById('password').value,
@@ -138,15 +138,15 @@
                 backICType: backICFile.type
             };
 
-            // Encode and set hidden input value
-            const jsonString = JSON.stringify(formData);
-            document.getElementById('jsonData').value = encodeURIComponent(jsonString);
-            
-            // Submit the form
+            // 4. Encode and set JSON data
+            document.getElementById('jsonData').value = 
+                encodeURIComponent(JSON.stringify(formData));
+
+            // 5. Submit form
             e.target.submit();
 
-            // Show loading state
-            message.textContent = 'Submitting your registration...';
+            // 6. Show temporary status
+            message.textContent = 'Registration in progress...';
 
         } catch (error) {
             console.error('Submission Error:', error);
@@ -155,7 +155,7 @@
     });
 
     function validateForm() {
-        // Password match validation
+        // Password validation
         const password = document.getElementById('password');
         const confirmPassword = document.getElementById('confirmPassword');
         if (password.value !== confirmPassword.value) {
@@ -163,7 +163,7 @@
             return false;
         }
 
-        // Email match validation
+        // Email validation
         const email = document.getElementById('email');
         const confirmEmail = document.getElementById('confirmEmail');
         if (email.value !== confirmEmail.value) {
@@ -175,18 +175,14 @@
         const frontIC = document.getElementById('frontIC').files[0];
         const backIC = document.getElementById('backIC').files[0];
         
-        // Check files exist
         if (!frontIC || !backIC) {
             showError('Both IC documents are required');
             return false;
         }
 
-        // Validate file types
+        // File type validation
         const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        const frontType = frontIC.type;
-        const backType = backIC.type;
-        
-        if (!validTypes.includes(frontType) || !validTypes.includes(backType)) {
+        if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
             showError('Only JPG, PNG, or PDF files allowed');
             return false;
         }
@@ -195,9 +191,7 @@
     }
 
     function showError(text) {
-        const messageElement = document.getElementById('message');
-        messageElement.textContent = `Error: ${text}`;
-        messageElement.style.display = 'block';
+        document.getElementById('message').textContent = `Error: ${text}`;
     }
 
     function fileToBase64(file) {
@@ -205,9 +199,7 @@
             const reader = new FileReader();
             reader.onloadend = () => {
                 if (reader.readyState === FileReader.DONE) {
-                    // Remove data URL prefix (e.g., "data:image/png;base64,")
-                    const base64Data = reader.result.split(',')[1];
-                    resolve(base64Data);
+                    resolve(reader.result.split(',')[1]); // Remove data URL prefix
                 }
             };
             reader.onerror = error => reject(error);
