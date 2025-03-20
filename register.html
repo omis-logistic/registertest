@@ -105,7 +105,7 @@
     </div>
 
     <script>
-    const PROXY_URL = 'https://script.google.com/macros/s/AKfycby7jdqpNWJe02VFLucXTMfkXVP3O61wza3x63NDKQ_tVQlYb_bgf3ORjmvCDtXU1XxD/exec';
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwkmuqZuv2CvITnEogk9R0aCu6C1s86AF5KMooWOZKo7M2Jfzt0UwUxho2dpV03g0BB/exec';
 
 async function handleSubmit(e) {
     e.preventDefault();
@@ -134,14 +134,11 @@ async function handleSubmit(e) {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(formData),
-            credentials: 'omit'
+            mode: 'cors' // Explicit CORS mode
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message);
-        }
-
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        
         const result = await response.json();
         
         if (result.success) {
@@ -153,7 +150,7 @@ async function handleSubmit(e) {
 
     } catch (error) {
         console.error('Error:', error);
-        message.textContent = error.message;
+        message.textContent = error.message.replace('TypeError: ', '');
         return false;
     }
 }
