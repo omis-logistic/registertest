@@ -41,15 +41,21 @@
         .file-input { 
             padding: 3px; 
         }
+        .ic-input {
+            font-family: monospace;
+            letter-spacing: 0.1em;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>New Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbwJ1CAxeXsI0l5lQv22RwTC8nEjMM_m79cpF6YQUY-VvddYObndXgL4rjoUxIT2tVTjMg/exec" 
+              action="https://script.google.com/macros/s/AKfycbz4T62b6h1QNKS6LsCkiz7TT9FBC0CZ6mFF-QGdsbkMlOfhOs29FhTNfvRFtgHMj3oV8Q/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
+            
+            <!-- Personal Information -->
             <div class="form-group">
                 <label for="phone">Phone Number:</label>
                 <input type="tel" id="phone" required>
@@ -90,6 +96,19 @@
                 <input type="text" id="postcode" required>
             </div>
 
+            <!-- New IC Number Field -->
+            <div class="form-group">
+                <label for="icNumber">IC Number:</label>
+                <input type="text" 
+                       id="icNumber" 
+                       class="ic-input"
+                       placeholder="XX-XXXXXX or XXXXXX-XX-XXXX"
+                       pattern="\d{2}-\d{6}|\d{6}-\d{2}-\d{4}"
+                       title="Must be in format: XX-XXXXXX or XXXXXX-XX-XXXX"
+                       required>
+            </div>
+
+            <!-- File Uploads -->
             <div class="form-group">
                 <label for="frontIC">Front IC (Image/PDF):</label>
                 <input type="file" id="frontIC" class="file-input" accept="image/*,.pdf" required>
@@ -100,7 +119,7 @@
                 <input type="file" id="backIC" class="file-input" accept="image/*,.pdf" required>
             </div>
             
-            <!-- Fixed hidden input with proper type and id -->
+            <!-- Hidden Data Field -->
             <input type="hidden" id="jsonData" name="data" value="">
             
             <div class="form-group">
@@ -111,92 +130,113 @@
     </div>
 
     <script>
-    document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const message = document.getElementById('message');
-    message.textContent = '';
-
-    try {
-        if (!validateForm()) return;
-
-        // Prepare data
-        const formData = {
-            phone: document.getElementById('phone').value,
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
-            fullName: document.getElementById('fullName').value,
-            address: document.getElementById('address').value,
-            postcode: document.getElementById('postcode').value,
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
-        };
-
-        // URL encode the JSON string
-        document.getElementById('jsonData').value = encodeURIComponent(JSON.stringify(formData));
-        
-        // Submit form
-        e.target.submit();
-
-    } catch (error) {
-        console.error('Error:', error);
-        message.textContent = `Error: ${error.message}`;
-    }
-});
-
-    function validateForm() {
-        // Password validation
-        const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('confirmPassword');
-        if (password.value !== confirmPassword.value) {
-            showError('Passwords do not match');
-            return false;
-        }
-
-        // Email validation
-        const email = document.getElementById('email');
-        const confirmEmail = document.getElementById('confirmEmail');
-        if (email.value !== confirmEmail.value) {
-            showError('Emails do not match');
-            return false;
-        }
-
-        // File validation
-        const frontIC = document.getElementById('frontIC').files[0];
-        const backIC = document.getElementById('backIC').files[0];
-        
-        if (!frontIC || !backIC) {
-            showError('Both IC documents are required');
-            return false;
-        }
-
-        // File type validation
-        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-            showError('Only JPG, PNG, or PDF files allowed');
-            return false;
-        }
-
-        return true;
-    }
-
-    function showError(text) {
-        document.getElementById('message').textContent = `Error: ${text}`;
-    }
-
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                if (reader.readyState === FileReader.DONE) {
-                    resolve(reader.result.split(',')[1]); // Remove data URL prefix
-                }
-            };
-            reader.onerror = error => reject(error);
-            reader.readAsDataURL(file);
+        // IC Number Auto-Formatting
+        document.getElementById('icNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/-/g, '');
+            if (value.length > 2 && value.length <= 8) {
+                value = value.slice(0,2) + '-' + value.slice(2);
+            } else if (value.length > 8) {
+                value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
+            }
+            e.target.value = value;
         });
-    }
-</script>
+
+        // Form Submission Handler
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = document.getElementById('message');
+            message.textContent = '';
+
+            try {
+                if (!validateForm()) return;
+
+                // Prepare form data
+                const formData = {
+                    icNumber: document.getElementById('icNumber').value,
+                    phone: document.getElementById('phone').value,
+                    password: document.getElementById('password').value,
+                    email: document.getElementById('email').value,
+                    fullName: document.getElementById('fullName').value,
+                    address: document.getElementById('address').value,
+                    postcode: document.getElementById('postcode').value,
+                    frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+                    backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+                    frontICType: document.getElementById('frontIC').files[0].type,
+                    backICType: document.getElementById('backIC').files[0].type
+                };
+
+                // Encode and submit
+                document.getElementById('jsonData').value = encodeURIComponent(JSON.stringify(formData));
+                e.target.submit();
+
+            } catch (error) {
+                console.error('Error:', error);
+                message.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Form Validation
+        function validateForm() {
+            // Password match
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirmPassword');
+            if (password.value !== confirmPassword.value) {
+                showError('Passwords do not match');
+                return false;
+            }
+
+            // Email match
+            const email = document.getElementById('email');
+            const confirmEmail = document.getElementById('confirmEmail');
+            if (email.value !== confirmEmail.value) {
+                showError('Emails do not match');
+                return false;
+            }
+
+            // IC Number validation
+            const icNumber = document.getElementById('icNumber').value;
+            const icPattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
+            if (!icPattern.test(icNumber)) {
+                showError('Invalid IC Number format');
+                return false;
+            }
+
+            // File validation
+            const frontIC = document.getElementById('frontIC').files[0];
+            const backIC = document.getElementById('backIC').files[0];
+            
+            if (!frontIC || !backIC) {
+                showError('Both IC documents are required');
+                return false;
+            }
+
+            // File type check
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
+                showError('Only JPG, PNG, or PDF files allowed');
+                return false;
+            }
+
+            return true;
+        }
+
+        // Helper functions
+        function showError(text) {
+            document.getElementById('message').textContent = `Error: ${text}`;
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (reader.readyState === FileReader.DONE) {
+                        resolve(reader.result.split(',')[1]);
+                    }
+                };
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+    </script>
 </body>
 </html>
