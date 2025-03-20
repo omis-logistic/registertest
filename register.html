@@ -46,7 +46,10 @@
 <body>
     <div class="container">
         <h2>New Registration</h2>
-        <form id="registrationForm" action="https://script.google.com/macros/s/AKfycbyOpwQ_0uW6XEUUNysPtDvNh1eh8ha73r_Ul0UikQrML258nhOoeVuu1nnNRp2iVARh4Q/exec" method="POST" enctype="text/plain">
+        <form id="registrationForm" 
+              action="https://script.google.com/macros/s/AKfycbwhdZC_UQx7YKRYiqdACc6nrF9Yh-n_EqykajgrzMplx_wkwKwPKrRSh6n8nIcEKvwo4Q/exec" 
+              method="POST" 
+              enctype="application/x-www-form-urlencoded">
             <div class="form-group">
                 <label for="phone">Phone Number:</label>
                 <input type="tel" id="phone" required>
@@ -108,100 +111,109 @@
     </div>
 
     <script>
-        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const message = document.getElementById('message');
-            message.textContent = '';
+    document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('message');
+        message.textContent = '';
 
-            try {
-                // Validate form first
-                if (!validateForm()) return;
+        try {
+            // Validate form inputs first
+            if (!validateForm()) return;
 
-                // Get files
-                const frontICFile = document.getElementById('frontIC').files[0];
-                const backICFile = document.getElementById('backIC').files[0];
+            // Get file inputs
+            const frontICFile = document.getElementById('frontIC').files[0];
+            const backICFile = document.getElementById('backIC').files[0];
 
-                // Prepare data
-                const formData = {
-                    phone: document.getElementById('phone').value,
-                    password: document.getElementById('password').value,
-                    email: document.getElementById('email').value,
-                    fullName: document.getElementById('fullName').value,
-                    address: document.getElementById('address').value,
-                    postcode: document.getElementById('postcode').value,
-                    frontIC: await fileToBase64(frontICFile),
-                    backIC: await fileToBase64(backICFile),
-                    frontICType: frontICFile.type,
-                    backICType: backICFile.type
-                };
+            // Prepare form data
+            const formData = {
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value,
+                fullName: document.getElementById('fullName').value,
+                address: document.getElementById('address').value,
+                postcode: document.getElementById('postcode').value,
+                frontIC: await fileToBase64(frontICFile),
+                backIC: await fileToBase64(backICFile),
+                frontICType: frontICFile.type,
+                backICType: backICFile.type
+            };
 
-                // Set hidden input value using ID selector
-                document.getElementById('jsonData').value = JSON.stringify(formData);
-                
-                // Submit form
-                e.target.submit();
-
-                // Show loading state
-                message.textContent = 'Submitting data...';
-
-            } catch (error) {
-                console.error('Error:', error);
-                message.textContent = `Error: ${error.message}`;
-            }
-        });
-
-        function validateForm() {
-            // Password match
-            const password = document.getElementById('password');
-            const confirmPassword = document.getElementById('confirmPassword');
-            if (password.value !== confirmPassword.value) {
-                showError('Passwords do not match');
-                return false;
-            }
-
-            // Email match
-            const email = document.getElementById('email');
-            const confirmEmail = document.getElementById('confirmEmail');
-            if (email.value !== confirmEmail.value) {
-                showError('Emails do not match');
-                return false;
-            }
-
-            // File validation
-            const frontIC = document.getElementById('frontIC').files[0];
-            const backIC = document.getElementById('backIC').files[0];
+            // Encode and set hidden input value
+            const jsonString = JSON.stringify(formData);
+            document.getElementById('jsonData').value = encodeURIComponent(jsonString);
             
-            if (!frontIC || !backIC) {
-                showError('Both IC documents are required');
-                return false;
-            }
+            // Submit the form
+            e.target.submit();
 
-            // File type check
-            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-                showError('Only JPG, PNG, or PDF files allowed');
-                return false;
-            }
+            // Show loading state
+            message.textContent = 'Submitting your registration...';
 
-            return true;
+        } catch (error) {
+            console.error('Submission Error:', error);
+            message.textContent = `Error: ${error.message}`;
+        }
+    });
+
+    function validateForm() {
+        // Password match validation
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        if (password.value !== confirmPassword.value) {
+            showError('Passwords do not match');
+            return false;
         }
 
-        function showError(text) {
-            document.getElementById('message').textContent = `Error: ${text}`;
+        // Email match validation
+        const email = document.getElementById('email');
+        const confirmEmail = document.getElementById('confirmEmail');
+        if (email.value !== confirmEmail.value) {
+            showError('Emails do not match');
+            return false;
         }
 
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    if (reader.readyState === FileReader.DONE) {
-                        resolve(reader.result.split(',')[1]);
-                    }
-                };
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
+        // File validation
+        const frontIC = document.getElementById('frontIC').files[0];
+        const backIC = document.getElementById('backIC').files[0];
+        
+        // Check files exist
+        if (!frontIC || !backIC) {
+            showError('Both IC documents are required');
+            return false;
         }
-    </script>
+
+        // Validate file types
+        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        const frontType = frontIC.type;
+        const backType = backIC.type;
+        
+        if (!validTypes.includes(frontType) || !validTypes.includes(backType)) {
+            showError('Only JPG, PNG, or PDF files allowed');
+            return false;
+        }
+
+        return true;
+    }
+
+    function showError(text) {
+        const messageElement = document.getElementById('message');
+        messageElement.textContent = `Error: ${text}`;
+        messageElement.style.display = 'block';
+    }
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (reader.readyState === FileReader.DONE) {
+                    // Remove data URL prefix (e.g., "data:image/png;base64,")
+                    const base64Data = reader.result.split(',')[1];
+                    resolve(base64Data);
+                }
+            };
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
+</script>
 </body>
 </html>
