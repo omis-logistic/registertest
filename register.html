@@ -105,51 +105,56 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycby7AYWqjAHqCqKJ4JA_2pl0n5D5AYv3NuqlpRDczxcv-_eKo226DjJPFo6s2H0H5CDTUA/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby_kIr-SjOef0zhhE9c02hZmOmr_QxKB5jG6krEU4z-Yzn5mmbcFELE4UVaHk_nCz_kwQ/exec';
 
-        async function handleSubmit(e) {
-            e.preventDefault();
-            const message = document.getElementById('message');
-            message.textContent = '';
+async function handleSubmit(e) {
+    e.preventDefault();
+    const message = document.getElementById('message');
+    message.textContent = '';
 
-            try {
-                // Validate form
-                if (!validateForm()) return;
+    try {
+        if (!validateForm()) return;
 
-                // Prepare data
-                const formData = {
-                phone: document.getElementById('phone').value,
-                password: document.getElementById('password').value,
-                email: document.getElementById('email').value,
-                fullName: document.getElementById('fullName').value,
-                address: document.getElementById('address').value,
-                postcode: document.getElementById('postcode').value,
-                frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-                backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-                frontICType: document.getElementById('frontIC').files[0].type,
-                backICType: document.getElementById('backIC').files[0].type
-                };
+        // Prepare FormData instead of JSON
+        const form = new FormData();
+        form.append('phone', document.getElementById('phone').value);
+        form.append('password', document.getElementById('password').value);
+        form.append('email', document.getElementById('email').value);
+        form.append('fullName', document.getElementById('fullName').value);
+        form.append('address', document.getElementById('address').value);
+        form.append('postcode', document.getElementById('postcode').value);
+        
+        // Handle file uploads
+        const frontICFile = document.getElementById('frontIC').files[0];
+        const backICFile = document.getElementById('backIC').files[0];
+        
+        form.append('frontIC', await fileToBase64(frontICFile));
+        form.append('frontICType', frontICFile.type);
+        form.append('backIC', await fileToBase64(backICFile));
+        form.append('backICType', backICFile.type);
 
-                // Create temporary form
-                const form = document.createElement('form');
-                form.style.display = 'none';
-                form.method = 'POST';
-                form.action = GAS_URL;
+        // Send using fetch with proper headers
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: form
+        });
 
-                // Add data as hidden input
-                const input = document.createElement('input');
-                input.name = 'payload';
-                input.value = JSON.stringify(formData);
-                form.appendChild(input);
-
-                // Submit
-                document.body.appendChild(form);
-                form.submit();
-
-            } catch (error) {
-                message.textContent = error.message;
-            }
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`Success! User ID: ${result.userId}`);
+            document.getElementById('registrationForm').reset();
+        } else {
+            throw new Error(result.message);
         }
+
+    } catch (error) {
+        console.error('Error:', error);
+        message.textContent = error.message;
+    }
+}
 
     // Existing helper functions below
     function handleResult(result) {
