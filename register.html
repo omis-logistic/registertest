@@ -47,7 +47,7 @@
     <div class="container">
         <h2>New Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbzTLgTyhJD4464sDJPIgy-kp4x3uoywob1f_GhFnSfh-LRNnCUgLDkcEOqLckQZchSxAw/exec" 
+              action="https://script.google.com/macros/s/AKfycbwr0FTeaIUn_YYelY-pk5BGECmGoxK5Ra97PzKqxBrSnNcCRvPC9elL_02mW5hpmauWxA/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             <div class="form-group">
@@ -112,47 +112,38 @@
 
     <script>
     document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const message = document.getElementById('message');
-        message.textContent = '';
+    e.preventDefault();
+    const message = document.getElementById('message');
+    message.textContent = '';
 
-        try {
-            // 1. Validate form inputs
-            if (!validateForm()) return;
+    try {
+        if (!validateForm()) return;
 
-            // 2. Get file inputs
-            const frontICFile = document.getElementById('frontIC').files[0];
-            const backICFile = document.getElementById('backIC').files[0];
+        // Prepare data
+        const formData = {
+            phone: document.getElementById('phone').value,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value,
+            fullName: document.getElementById('fullName').value,
+            address: document.getElementById('address').value,
+            postcode: document.getElementById('postcode').value,
+            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+            frontICType: document.getElementById('frontIC').files[0].type,
+            backICType: document.getElementById('backIC').files[0].type
+        };
 
-            // 3. Prepare form data
-            const formData = {
-                phone: document.getElementById('phone').value,
-                password: document.getElementById('password').value,
-                email: document.getElementById('email').value,
-                fullName: document.getElementById('fullName').value,
-                address: document.getElementById('address').value,
-                postcode: document.getElementById('postcode').value,
-                frontIC: await fileToBase64(frontICFile),
-                backIC: await fileToBase64(backICFile),
-                frontICType: frontICFile.type,
-                backICType: backICFile.type
-            };
+        // URL encode the JSON string
+        document.getElementById('jsonData').value = encodeURIComponent(JSON.stringify(formData));
+        
+        // Submit form
+        e.target.submit();
 
-            // 4. Encode and set JSON data
-            document.getElementById('jsonData').value = 
-                encodeURIComponent(JSON.stringify(formData));
-
-            // 5. Submit form
-            e.target.submit();
-
-            // 6. Show temporary status
-            message.textContent = 'Registration in progress...';
-
-        } catch (error) {
-            console.error('Submission Error:', error);
-            message.textContent = `Error: ${error.message}`;
-        }
-    });
+    } catch (error) {
+        console.error('Error:', error);
+        message.textContent = `Error: ${error.message}`;
+    }
+});
 
     function validateForm() {
         // Password validation
