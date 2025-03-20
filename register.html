@@ -45,8 +45,8 @@
 </head>
 <body>
     <div class="container">
-        <h2>New User Registration</h2>
-        <form id="registrationForm">
+        <h2>New Registration</h2>
+        <form id="registrationForm" action="https://script.google.com/macros/s/AKfycbyOpwQ_0uW6XEUUNysPtDvNh1eh8ha73r_Ul0UikQrML258nhOoeVuu1nnNRp2iVARh4Q/exec" method="POST" enctype="text/plain">
             <div class="form-group">
                 <label for="phone">Phone Number:</label>
                 <input type="tel" id="phone" required>
@@ -105,66 +105,51 @@
     </div>
 
     <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyNR9cE2Jc762VFqxlwsCF-4LM-yNqF87kpW_ouG4uTfJihjkUONeoXmw7aGPbBck-Maw/exec';
-
-async function handleSubmit(e) {
-    e.preventDefault();
-    const message = document.getElementById('message');
-    message.textContent = '';
-
-    try {
-        if (!validateForm()) return;
-
-        // Prepare form data
-        const formData = {
-            phone: document.getElementById('phone').value,
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
-            fullName: document.getElementById('fullName').value,
-            address: document.getElementById('address').value,
-            postcode: document.getElementById('postcode').value,
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type,
-            callback: 'handleResponse'
-        };
-
-        // Create script tag
-        const script = document.createElement('script');
-        script.src = `${GAS_URL}?${new URLSearchParams(formData).toString()}`;
+    document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('message');
+        message.textContent = '';
         
-        // Add callback handler
-        window.handleResponse = function(response) {
-            if (response.success) {
-                alert(`Success! User ID: ${response.userId}`);
-                document.getElementById('registrationForm').reset();
-            } else {
-                throw new Error(response.message);
-            }
-            script.remove();
-        };
+        try {
+            // Validate form before submission
+            if (!validateForm()) return;
 
-        document.body.appendChild(script);
+            // Get file inputs
+            const frontICFile = document.getElementById('frontIC').files[0];
+            const backICFile = document.getElementById('backIC').files[0];
 
-    } catch (error) {
-        console.error('Error:', error);
-        message.textContent = error.message;
-    }
-}
+            // Prepare form data
+            const formData = {
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value,
+                fullName: document.getElementById('fullName').value,
+                address: document.getElementById('address').value,
+                postcode: document.getElementById('postcode').value,
+                frontIC: await fileToBase64(frontICFile),
+                backIC: await fileToBase64(backICFile),
+                frontICType: frontICFile.type,
+                backICType: backICFile.type
+            };
 
-    // Existing helper functions below
-    function handleResult(result) {
-        if (result.success) {
-            alert(`Registration Successful!\nUser ID: ${result.userId}`);
-            window.location.reload();
-        } else {
-            document.getElementById('message').textContent = result.message || 'Registration failed';
+            // Set hidden input value
+            const hiddenInput = document.querySelector('input[name="data"]');
+            hiddenInput.value = JSON.stringify(formData);
+            
+            // Submit form
+            e.target.submit();
+
+            // Show temporary loading message
+            message.textContent = 'Submitting... (please wait)';
+
+        } catch (error) {
+            console.error('Submission Error:', error);
+            message.textContent = `Error: ${error.message}`;
         }
-    }
+    });
 
     function validateForm() {
-        // Password validation
+        // Password match check
         const password = document.getElementById('password');
         const confirmPassword = document.getElementById('confirmPassword');
         if (password.value !== confirmPassword.value) {
@@ -172,7 +157,7 @@ async function handleSubmit(e) {
             return false;
         }
 
-        // Email validation
+        // Email match check
         const email = document.getElementById('email');
         const confirmEmail = document.getElementById('confirmEmail');
         if (email.value !== confirmEmail.value) {
@@ -189,7 +174,7 @@ async function handleSubmit(e) {
             return false;
         }
 
-        // File type validation
+        // File type check
         const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
         if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
             showError('Only JPG, PNG, or PDF files allowed');
@@ -208,16 +193,13 @@ async function handleSubmit(e) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 if (reader.readyState === FileReader.DONE) {
-                    resolve(reader.result.split(',')[1]);
+                    resolve(reader.result.split(',')[1]); // Remove data URL prefix
                 }
             };
             reader.onerror = error => reject(error);
             reader.readAsDataURL(file);
         });
     }
-
-    // Attach event listener
-    document.getElementById('registrationForm').addEventListener('submit', handleSubmit);
-    </script>
+</script>
 </body>
 </html>
