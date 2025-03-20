@@ -45,6 +45,18 @@
             font-family: monospace;
             letter-spacing: 0.1em;
         }
+
+                /* Previous styles remain the same */
+        .validation-message {
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+        .valid { color: green; }
+        .invalid { color: red; }
+        input:invalid { border-color: #ff4444; }
+        input:valid { border-color: #00C851; }
+        
     </style>
 </head>
 <body>
@@ -58,17 +70,26 @@
             <!-- Personal Information -->
             <div class="form-group">
                 <label for="phone">Phone Number:</label>
-                <input type="tel" id="phone" required>
+                <input type="tel" id="phone" 
+                       pattern="^(673\d{7}|60\d{9,})$"
+                       title="Must start with 673 (8 digits) or 60 (10+ digits)"
+                       required>
+                <span class="validation-message" id="phoneValidation"></span>
             </div>
 
             <div class="form-group">
                 <label for="password">Create Password:</label>
-                <input type="password" id="password" required>
+                <input type="password" id="password" 
+                       pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
+                       title="At least 6 characters with 1 uppercase and 1 number"
+                       required>
+                <span class="validation-message" id="passwordValidation"></span>
             </div>
 
             <div class="form-group">
                 <label for="confirmPassword">Confirm Password:</label>
                 <input type="password" id="confirmPassword" required>
+                <span class="validation-message" id="confirmPasswordValidation"></span>
             </div>
 
             <div class="form-group">
@@ -175,50 +196,118 @@
             }
         });
 
-        // Form Validation
-        function validateForm() {
-            // Password match
-            const password = document.getElementById('password');
-            const confirmPassword = document.getElementById('confirmPassword');
-            if (password.value !== confirmPassword.value) {
-                showError('Passwords do not match');
-                return false;
-            }
-
-            // Email match
-            const email = document.getElementById('email');
-            const confirmEmail = document.getElementById('confirmEmail');
-            if (email.value !== confirmEmail.value) {
-                showError('Emails do not match');
-                return false;
-            }
-
-            // IC Number validation
-            const icNumber = document.getElementById('icNumber').value;
-            const icPattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
-            if (!icPattern.test(icNumber)) {
-                showError('Invalid IC Number format');
-                return false;
-            }
-
-            // File validation
-            const frontIC = document.getElementById('frontIC').files[0];
-            const backIC = document.getElementById('backIC').files[0];
+        // Real-time Validation Functions
+        function validatePhoneNumber() {
+            const phone = document.getElementById('phone');
+            const validation = document.getElementById('phoneValidation');
+            const pattern = /^(673\d{7}|60\d{9,})$/;
             
-            if (!frontIC || !backIC) {
-                showError('Both IC documents are required');
+            if (!pattern.test(phone.value)) {
+                validation.textContent = "Format: 673XXXXXXX (8 digits) or 60XXXXXXXXXX (10+ digits)";
+                validation.className = 'validation-message invalid';
                 return false;
             }
-
-            // File type check
-            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-                showError('Only JPG, PNG, or PDF files allowed');
-                return false;
-            }
-
+            validation.textContent = "✓ Valid phone number";
+            validation.className = 'validation-message valid';
             return true;
         }
+
+        function validatePassword() {
+            const password = document.getElementById('password');
+            const validation = document.getElementById('passwordValidation');
+            const pattern = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+            
+            let messages = [];
+            if (password.value.length < 6) messages.push("6+ characters");
+            if (!/[A-Z]/.test(password.value)) messages.push("1 uppercase letter");
+            if (!/\d/.test(password.value)) messages.push("1 number");
+
+            if (messages.length > 0) {
+                validation.textContent = "Requirements: " + messages.join(", ");
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Strong password";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateConfirmPassword() {
+            const password = document.getElementById('password');
+            const confirm = document.getElementById('confirmPassword');
+            const validation = document.getElementById('confirmPasswordValidation');
+            
+            if (password.value !== confirm.value) {
+                validation.textContent = "Passwords do not match";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Passwords match";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        // Real-time Event Listeners
+        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
+        document.getElementById('password').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+        
+        // Form Validation
+    function validateForm() {
+    // Phone Number Validation
+    const isPhoneValid = validatePhoneNumber();
+    
+    // Password Validation
+    const isPasswordValid = validatePassword();
+    
+    // Confirm Password Validation
+    const isConfirmValid = validateConfirmPassword();
+    
+    // Email Validation
+    const email = document.getElementById('email').value;
+    const confirmEmail = document.getElementById('confirmEmail').value;
+    let isEmailValid = true;
+    if (email !== confirmEmail) {
+        showError('Emails do not match');
+        isEmailValid = false;
+    }
+
+    // IC Number Validation
+    const icNumber = document.getElementById('icNumber').value;
+    const icPattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
+    let isIcValid = true;
+    if (!icPattern.test(icNumber)) {
+        showError('Invalid IC Number format');
+        isIcValid = false;
+    }
+
+    // File Validation
+    const frontIC = document.getElementById('frontIC').files[0];
+    const backIC = document.getElementById('backIC').files[0];
+    let isFileValid = true;
+    
+    if (!frontIC || !backIC) {
+        showError('Both IC documents are required');
+        isFileValid = false;
+    }
+    
+    // File Type Validation
+    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (frontIC && backIC) {
+        if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
+            showError('Only JPG, PNG, or PDF files allowed');
+            isFileValid = false;
+        }
+    }
+
+    // Final Validation Check
+    return isPhoneValid && 
+           isPasswordValid && 
+           isConfirmValid && 
+           isEmailValid && 
+           isIcValid && 
+           isFileValid;
+}
 
         // Helper functions
         function showError(text) {
