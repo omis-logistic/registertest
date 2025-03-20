@@ -105,7 +105,7 @@
     </div>
 
     <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjYSzE7Ssdz-rFjtFRlO_62LAeHNWi527DIc70WUWvjXUfB4T9lV_WdlMY8Mdhzc1wnQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyNR9cE2Jc762VFqxlwsCF-4LM-yNqF87kpW_ouG4uTfJihjkUONeoXmw7aGPbBck-Maw/exec';
 
 async function handleSubmit(e) {
     e.preventDefault();
@@ -126,26 +126,26 @@ async function handleSubmit(e) {
             frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
             backIC: await fileToBase64(document.getElementById('backIC').files[0]),
             frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
+            backICType: document.getElementById('backIC').files[0].type,
+            callback: 'handleResponse'
         };
 
-        // Send request
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(formData)
-        });
+        // Create script tag
+        const script = document.createElement('script');
+        script.src = `${GAS_URL}?${new URLSearchParams(formData).toString()}`;
+        
+        // Add callback handler
+        window.handleResponse = function(response) {
+            if (response.success) {
+                alert(`Success! User ID: ${response.userId}`);
+                document.getElementById('registrationForm').reset();
+            } else {
+                throw new Error(response.message);
+            }
+            script.remove();
+        };
 
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert(`Success! User ID: ${result.userId}`);
-            document.getElementById('registrationForm').reset();
-        } else {
-            throw new Error(result.message);
-        }
+        document.body.appendChild(script);
 
     } catch (error) {
         console.error('Error:', error);
