@@ -105,7 +105,7 @@
     </div>
 
     <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby_kIr-SjOef0zhhE9c02hZmOmr_QxKB5jG6krEU4z-Yzn5mmbcFELE4UVaHk_nCz_kwQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjYSzE7Ssdz-rFjtFRlO_62LAeHNWi527DIc70WUWvjXUfB4T9lV_WdlMY8Mdhzc1wnQ/exec';
 
 async function handleSubmit(e) {
     e.preventDefault();
@@ -115,28 +115,25 @@ async function handleSubmit(e) {
     try {
         if (!validateForm()) return;
 
-        // Prepare FormData instead of JSON
-        const form = new FormData();
-        form.append('phone', document.getElementById('phone').value);
-        form.append('password', document.getElementById('password').value);
-        form.append('email', document.getElementById('email').value);
-        form.append('fullName', document.getElementById('fullName').value);
-        form.append('address', document.getElementById('address').value);
-        form.append('postcode', document.getElementById('postcode').value);
-        
-        // Handle file uploads
-        const frontICFile = document.getElementById('frontIC').files[0];
-        const backICFile = document.getElementById('backIC').files[0];
-        
-        form.append('frontIC', await fileToBase64(frontICFile));
-        form.append('frontICType', frontICFile.type);
-        form.append('backIC', await fileToBase64(backICFile));
-        form.append('backICType', backICFile.type);
+        // Prepare form data
+        const formData = {
+            phone: document.getElementById('phone').value,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value,
+            fullName: document.getElementById('fullName').value,
+            address: document.getElementById('address').value,
+            postcode: document.getElementById('postcode').value,
+            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+            frontICType: document.getElementById('frontIC').files[0].type,
+            backICType: document.getElementById('backIC').files[0].type
+        };
 
-        // Send using fetch with proper headers
+        // Send request
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            body: form
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
         });
 
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
